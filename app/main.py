@@ -1,6 +1,8 @@
 """A small marketplace listings API: the repository the ticket-to-pr
 pipeline works on. Data lives in memory; the point is the code and its tests."""
 
+from typing import Literal
+
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
@@ -33,11 +35,19 @@ def seed() -> None:
 
 
 @app.get("/listings")
-def list_listings(category: str | None = None) -> list[Listing]:
+def list_listings(
+    category: str | None = None,
+    sort: Literal["price_asc", "price_desc"] | None = None,
+) -> list[Listing]:
     listings = LISTINGS.values()
     if category is not None:
         listings = [listing for listing in listings if listing.category == category]
-    return sorted(listings, key=lambda listing: listing.id)
+    result = sorted(listings, key=lambda listing: listing.id)
+    if sort == "price_asc":
+        result.sort(key=lambda listing: listing.price_cents)
+    elif sort == "price_desc":
+        result.sort(key=lambda listing: listing.price_cents, reverse=True)
+    return result
 
 
 @app.get("/listings/{listing_id}")
