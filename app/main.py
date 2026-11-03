@@ -1,7 +1,7 @@
 """A small marketplace listings API: the repository the ticket-to-pr
 pipeline works on. Data lives in memory; the point is the code and its tests."""
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel, Field
 
 app = FastAPI(title="Listings API")
@@ -33,8 +33,18 @@ def seed() -> None:
 
 
 @app.get("/listings")
-def list_listings(category: str | None = None) -> list[Listing]:
-    listings = LISTINGS.values()
+def list_listings(
+    category: str | None = None,
+    min_price: int | None = Query(default=None, ge=0),
+    max_price: int | None = Query(default=None, ge=0),
+) -> list[Listing]:
+    if min_price is not None and max_price is not None and min_price > max_price:
+        raise HTTPException(status_code=422, detail="min_price must be less than or equal to max_price")
+    listings = list(LISTINGS.values())
+    if min_price is not None:
+        listings = [x for x in listings if x.price_cents >= min_price]
+    if max_price is not None:
+        listings = [x for x in listings if x.price_cents <= max_price]
     if category is not None:
         listings = [listing for listing in listings if listing.category == category]
     return sorted(listings, key=lambda listing: listing.id)
