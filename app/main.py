@@ -33,8 +33,13 @@ def seed() -> None:
 
 
 @app.get("/listings")
-def list_listings(category: str | None = None) -> list[Listing]:
+def list_listings(category: str | None = None, city: str | None = None) -> list[Listing]:
     listings = LISTINGS.values()
+    if city is not None:
+        city = city.strip()
+        if not city:
+            raise HTTPException(status_code=422, detail="city must not be empty")
+        listings = [listing for listing in listings if listing.city.casefold() == city.casefold()]
     if category is not None:
         listings = [listing for listing in listings if listing.category == category]
     return sorted(listings, key=lambda listing: listing.id)
