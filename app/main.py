@@ -33,8 +33,11 @@ def seed() -> None:
 
 
 @app.get("/listings")
-def list_listings(category: str | None = None) -> list[Listing]:
+def list_listings(category: str | None = None, city: str | None = None) -> list[Listing]:
     listings = LISTINGS.values()
+    if city is not None:
+        wanted = city.casefold()
+        listings = [listing for listing in listings if listing.city.casefold() == wanted]
     if category is not None:
         listings = [listing for listing in listings if listing.category == category]
     return sorted(listings, key=lambda listing: listing.id)
