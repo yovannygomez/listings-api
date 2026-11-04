@@ -1,6 +1,8 @@
 """A small marketplace listings API: the repository the ticket-to-pr
 pipeline works on. Data lives in memory; the point is the code and its tests."""
 
+import itertools
+
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
@@ -21,8 +23,13 @@ class Listing(NewListing):
 LISTINGS: dict[int, Listing] = {}
 
 
+_ids = itertools.count(1)
+
+
 def seed() -> None:
+    global _ids
     LISTINGS.clear()
+    _ids = itertools.count(1)
     for item in [
         NewListing(title="Mountain bike, 21 speeds", category="bikes", price_cents=35000, city="Toronto"),
         NewListing(title="Sofa, three seats", category="furniture", price_cents=20000, city="Montreal"),
@@ -49,9 +56,16 @@ def get_listing(listing_id: int) -> Listing:
 
 @app.post("/listings", status_code=201)
 def create_listing(new: NewListing) -> Listing:
-    listing = Listing(id=max(LISTINGS, default=0) + 1, **new.model_dump())
+    listing = Listing(id=next(_ids), **new.model_dump())
     LISTINGS[listing.id] = listing
     return listing
+
+
+@app.delete("/listings/{listing_id}", status_code=204)
+def delete_listing(listing_id: int) -> None:
+    if listing_id not in LISTINGS:
+        raise HTTPException(status_code=404, detail="Listing not found")
+    del LISTINGS[listing_id]
 
 
 seed()
